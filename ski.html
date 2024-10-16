@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skier Game</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            background: lightblue;
+            display: block;
+        }
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40px;
+            display: none;
+        }
+
+        @keyframes unicorn-pop {
+            0% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+            50% {
+                transform: scale(1.5);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+        }
+
+        .pop-animation {
+            animation: unicorn-pop 0.5s ease-in-out;
+        }
+
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="game-over">Game Over</div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let skierPosition = 'center'; // 'left', 'right', or 'center'
+let skierEmoji = '⛷️'; // Default skier emoji
+let points = 0;
+let speed = 1.25; // Start with a much slower speed
+let backgroundY = 0; // For background movement
+let obstacles = [];
+let number1, number2;
+let correctPath = 'center'; // 'left', 'center', or 'right'
+let gameOver = false;
+let feedbackEmoji = ''; // Emoji to show feedback (🦄 or 💥)
+let feedbackTimer = 0; // Timer to control how long the emoji is shown
+
+let snowflakes = []; // Array to store snowflake positions and speeds
+const maxSnowflakes = 30;
+
+// List of obstacle emojis
+const obstacleEmojis = ['⛄️', '⛰️', '🌲', '🎄', '🎿'];
+let obstacleYPositions = [canvas.height, canvas.height, canvas.height]; // Initial positions of the obstacles
+
+// Generate random numbers and determine correct path
+function generateNumbers() {
+    number1 = Math.floor(Math.random() * 5);
+    number2 = Math.floor(Math.random() * 6);
+    const correctSum = number1 + number2;
+
+    // Assign random paths for correct and incorrect sums
+    const paths = ['left', 'center', 'right'];
+    correctPath = paths[Math.floor(Math.random() * 3)];
+
+    // Generate obstacles with wrong answers or emojis (random tree/rock)
+    obstacles = paths.map(path => {
+        if (path === correctPath) {
+            return { type: 'number', value: correctSum, passed: false };
+        } else {
+            const wrongAnswer = Math.random() < 0.5 ? correctSum + 1 : correctSum - 1;
+            return Math.random() < 0.5 
+                ? { type: 'number', value: wrongAnswer, passed: false } 
+                : { type: 'emoji', value: obstacleEmojis[Math.floor(Math.random() * obstacleEmojis.length)], passed: false };
+        }
+    });
+
+    obstacleYPositions = [canvas.height, canvas.height, canvas.height]; // Reset obstacles to start at bottom
+}
+
+// Draw the question (numbers to add) above the skier
+function drawQuestion() {
+    const questionText = `${number1} + ${number2} = ?`;
+    
+    ctx.fillStyle = "black";
+    ctx.font = "30px Helvetica";
+    ctx.fillText(questionText, canvas.width / 2 - 50, 50); // Draw question above the skier
+}
+
+// Draw points in the top-right corner
+function drawPoints() {
+    ctx.fillStyle = "black";
+    ctx.font = "30px Arial";
+    ctx.fillText(`❤️ ${points}`, canvas.width - 150, 50); // Show points in the top-right corner
+}
+
+function generateSnowflakes() {
+    for (let i = 0; i < maxSnowflakes; i++) {
+        snowflakes.push({
+            x: Math.random() * canvas.width, // Random x position
+            y: Math.random() * canvas.height, // Random y position
+            speed: Math.random() * 1 + 0.5,  // Random speed for falling
+            size: Math.random() * 20 + 10    // Random size for variation in flake sizes
+        });
+    }
+}
+
+// Function to draw and update the snowflakes
+function drawSnowflakes() {
+    ctx.font = "20px Arial";
+    snowflakes.forEach((flake, index) => {
+        // Draw the snowflake emoji
+        ctx.fillText("❄️", flake.x, flake.y);
+
+        // Update the snowflake's position
+        flake.y += flake.speed;
+
+        // If snowflake goes off screen, reset its position to the top
+        if (flake.y > canvas.height) {
+            flake.y = -flake.size; // Reset to above the screen
+            flake.x = Math.random() * canvas.width; // Random new x position
+            flake.speed = Math.random() * 1 + 0.5;  // Randomize speed again
+        }
+    });
+}
+
+// Draw the gradient background to simulate moving downhill snow
+function drawBackground() {
+    let gradient = ctx.createLinearGradient(0, backgroundY, 0, backgroundY + canvas.height);
+    gradient.addColorStop(0, "#ffffff"); // Light snow at top
+    gradient.addColorStop(1, "#e0e0e0"); // Darker snow at bottom
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    backgroundY -= speed; // Move the gradient to give a downhill effect
+    if (backgroundY <= -canvas.height) {
+        backgroundY = 0; // Loop the gradient
+    }
+
+    drawSnowflakes();
+}
+
+// Draw skier (stationary at the top)
+function drawSkier() {
+    ctx.font = "50px Arial";
+    if (skierPosition === 'left') {
+        ctx.fillText('⛷️', 100, 100); // Draw skier on left
+    } else if (skierPosition === 'center') {
+        ctx.fillText(skierEmoji, canvas.width / 2 - 25, 100); // Draw skier in center
+    } else if (skierPosition === 'right') {
+        ctx.fillText('⛷️', canvas.width - 150, 100);
+    }
+}
+
+// Draw lanes (to differentiate paths)
+function drawLanes() {
+    const laneWidth = canvas.width / 3;
+
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
+    ctx.lineWidth = 5;
+
+    // Draw left lane divider
+    ctx.beginPath();
+    ctx.moveTo(laneWidth, 0);
+    ctx.lineTo(laneWidth, canvas.height);
+    ctx.stroke();
+
+    // Draw right lane divider
+    ctx.beginPath();
+    ctx.moveTo(2 * laneWidth, 0);
+    ctx.lineTo(2 * laneWidth, canvas.height);
+    ctx.stroke();
+}
+
+// Draw obstacles (numbers and emojis), moving from bottom to top
+function drawObstacles() {
+    const pathPositions = [
+        { x: 100, y: obstacleYPositions[0] },
+        { x: canvas.width / 2 - 25, y: obstacleYPositions[1] },
+        { x: canvas.width - 150, y: obstacleYPositions[2] }
+    ];
+
+    obstacles.forEach((obstacle, index) => {
+        if (obstacle.type === 'number') {
+            ctx.fillStyle = "black";
+            ctx.font = "30px Helvetica";
+            ctx.fillText(obstacle.value, pathPositions[index].x, pathPositions[index].y);
+        } else if (obstacle.type === 'emoji') {
+            ctx.fillStyle = "black";
+            ctx.font = "50px Arial";
+            ctx.fillText(obstacle.value, pathPositions[index].x, pathPositions[index].y);
+        }
+
+        // Move obstacle upwards
+        obstacleYPositions[index] -= speed;
+    });
+
+    // Reset obstacles when they reach the top of the screen
+    if (obstacleYPositions[0] < 0 || obstacleYPositions[1] < 0 || obstacleYPositions[2] < 0) {
+        generateNumbers(); // Generate new numbers and reset positions
+    }
+}
+
+function drawPopEmoji() {
+    ctx.save(); // Save the canvas state
+
+    // Calculate the scaling position based on the current scale factor
+    let emojiX = canvas.width / 2 - 25;
+    let emojiY = 200;
+    
+    // Move to the center where the emoji is drawn, then scale
+    ctx.translate(emojiX + 25, emojiY + 25); // Translate to the center of the emoji
+    ctx.scale(popScale, popScale);  // Scale the canvas context
+    ctx.translate(-emojiX - 25, -emojiY - 25); // Move back
+
+    // Draw the emoji
+    ctx.font = "50px Arial";
+    ctx.fillText(feedbackEmoji, emojiX, emojiY);
+
+    ctx.restore(); // Restore the canvas state
+
+    // Update the scale factor for the pop effect
+    popScale += 0.05 * popDirection; // Increase or decrease scale depending on direction
+
+    // Reverse direction when the scale reaches certain limits
+    if (popScale > 1.5) {
+        popDirection = -1;  // Start shrinking
+    } else if (popScale < 1) {
+        popAnimationActive = false;  // Stop the animation when it finishes shrinking
+    }
+}
+
+
+// Update game state
+function updateGame() {
+    if (gameOver) return;
+
+    // Draw moving background to simulate downhill movement
+    drawBackground();
+
+    // Draw the question above the skier
+    drawQuestion();
+
+    // Draw lanes for left, center, and right paths
+    drawLanes();
+
+    // Draw skier and obstacles
+    drawSkier();
+    drawObstacles();
+
+    // Draw points in the top-right corner
+    drawPoints();
+
+    if (feedbackTimer > 0) {
+        if (popAnimationActive) {
+            drawPopEmoji();
+        } else {
+            ctx.font = "50px Arial";
+            ctx.fillText(feedbackEmoji, canvas.width / 2 - 25, 200); // Static feedback if no animation
+        }
+        feedbackTimer--; // Decrease timer
+    }
+
+    // Show feedback emoji (🦄 or 💥) for a short duration
+    if (feedbackTimer > 0) {
+        ctx.font = "50px Arial";
+        ctx.fillText(feedbackEmoji, canvas.width / 2 - 25, 200); // Show emoji at center
+        feedbackTimer--; // Decrease timer
+    }
+
+    // Check if skier passed any obstacle
+    checkCollision();
+
+    // Gradually increase speed every 10 points, but make the increment smaller
+    if (points % 10 === 0 && points !== 0 && speed <= 2) { // Cap speed at a slower maximum
+        // speed += 0.1; // Much smaller speed increment to make the game slower
+    }
+
+    requestAnimationFrame(updateGame);
+}
+
+let popAnimationActive = false;  // Boolean flag to control the pop animation
+let popScale = 1;  // Scale factor for the unicorn
+let popDirection = 1;  // Direction of the scaling, 1 for growing, -1 for shrinking
+
+// Check if the skier passed through the correct path
+function checkCollision() {
+    if (obstacleYPositions[0] < 150 || obstacleYPositions[1] < 150 || obstacleYPositions[2] < 150) {
+        let obstacleIndex = skierPosition === 'left' ? 0 : skierPosition === 'center' ? 1 : 2;
+        
+        if (!obstacles[obstacleIndex].passed) { // Only process collision if not already passed
+            obstacles[obstacleIndex].passed = true; // Mark obstacle as passed
+
+            if (obstacles[obstacleIndex].type === 'number') {
+                const correctSum = number1 + number2;
+                if (obstacles[obstacleIndex].value === correctSum) {
+                    points++;
+                    feedbackEmoji = '🦄'; // Correct answer feedback
+                    feedbackTimer = 300; // Show feedback for 30 frames
+
+                    // Activate the pop animation
+                    popAnimationActive = true;
+                    popScale = 1;  // Reset the scale to start animation
+                    popDirection = 1;  // Start by growing the emoji
+                } else {
+                  if (points > 0) {
+                    points--;
+                  }
+                  
+                  feedbackEmoji = '💥'; // Wrong answer feedback
+                  feedbackTimer = 300; // Show feedback for 30 frames
+
+                  // Activate the pop animation
+                  popAnimationActive = true;
+                  popScale = 1;  // Reset the scale to start animation
+                  popDirection = 1;  // Start by growing the emoji
+                }
+            }
+        }
+    }
+}
+
+// Handle user input for skier movement and flip skier emoji
+document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") {
+        if (skierPosition === 'right') {
+            skierPosition = 'center'; // Move from right to center
+        } else if (skierPosition === 'center') {
+            skierPosition = 'left'; // Move from center to left
+        }
+    } else if (e.key === "ArrowRight") {
+        if (skierPosition === 'left') {
+            skierPosition = 'center'; // Move from left to center
+        } else if (skierPosition === 'center') {
+            skierPosition = 'right'; // Move from center to right
+        }
+    }
+});
+
+// End the game
+function endGame(message) {
+    gameOver = true;
+    document.getElementById("game-over").innerText = message;
+    document.getElementById("game-over").style.display = "block";
+}
+
+// Start the game
+generateNumbers();
+updateGame();
+generateSnowflakes();
+</script>
+</body>
+</html>

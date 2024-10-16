@@ -1,0 +1,56 @@
+<html>
+<meta charset="UTF-8">
+<center>
+<h1 style="font-family: Helvetica; font-size: 150; font-weight: bold; color: black; margin-top: 150px;" id="eliza">SPACE za poceti igru</h1>
+
+</center>
+
+
+<script>
+
+const germanNumbers = [
+    'Null', 'Eins', 'Zwei', 'Drei', 'Vier', 'Fünf', 'Sechs', 'Sieben', 'Acht', 'Neun',
+    'Zehn', 'Elf', 'Zwölf', 'Dreizehn', 'Vierzehn', 'Fünfzehn', 'Sechzehn', 'Siebzehn',
+    'Achtzehn', 'Neunzehn', 'Zwanzig'
+];
+
+const germanTens = ['Zehn', 'Zwanzig', 'Dreizsig', 'Vierzig', 'Fünfzig', 'Sechzig', 'Siebzig', 'Achtzig', 'Neunzig'];
+
+// Add event listener to the document that runs when the DOM content is fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listener to listen for keydown events
+    document.addEventListener('keydown', function(event) {
+        // Check if the pressed key is the Space key (key code 32 or key ' ' for modern browsers)
+        if (event.code === 'Space' || event.key === ' ') {
+            console.log('Space key was pressed');
+            
+            let coinFlip = Math.floor(Math.random() * 4);
+
+            if (coinFlip != 0) {
+              let randomNumber = Math.floor(Math.random() * 21);
+              document.getElementById("eliza").innerHTML = randomNumber + "<br/>" + germanNumbers[randomNumber];
+            } else {
+              let randomNumber = Math.floor(Math.random() * 8) + 1;
+              document.getElementById("eliza").innerHTML = randomNumber + "0<br/>" + germanTens[randomNumber - 1];
+            }
+
+            speakGermanNumber(germanNumbers[randomNumber]);
+            // Prevent default behavior if needed (e.g., to avoid scrolling)
+            event.preventDefault();
+        }
+    });
+});
+
+
+function speakGermanNumber(text) {
+    // Check if the browser supports speech synthesis
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'de-DE'; // Set language to German
+        window.speechSynthesis.speak(utterance);
+    } else {
+        console.log('Sorry, your browser does not support speech synthesis.');
+    }
+}
+
+</script>

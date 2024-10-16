@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Game - German Letters</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+        }
+        .card {
+            height: 100px;
+            width: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #E2E8F0;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            color: white;
+            font-size: 2rem;
+        }
+        .matched {
+            background-color: #9AE6B4;
+            cursor: default;
+        }
+        .flipped {
+            background-color: #68D391;
+        }
+        #timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .emoji-overlay {
+            display: none; /* Initially hidden */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10rem;
+            animation: rainbow-animation 2s ease-in-out;
+        }
+        @keyframes rainbow-animation {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 relative">
+
+    <div class="flex flex-col items-center justify-center min-h-screen">
+        <h1 class="text-3xl font-bold mb-8">Memory Game</h1>
+        <div id="timer">Time: 00:00</div>
+        <div id="game-board" class="grid grid-cols-4 gap-4">
+            <!-- Game cards will be dynamically created here -->
+        </div>
+        <button id="restart-btn" class="mt-6 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            Restart Game
+        </button>
+    </div>
+
+    <!-- Rainbow Emoji Overlay -->
+    <div id="emoji-overlay" class="emoji-overlay">
+        🌈
+    </div>
+
+    <script>
+        const letters = [
+            { letter: 'A', type: 'upper', color: '#FF4500', index: 1 }, { letter: 'a', type: 'lower', color: '#FF4500', index: 1 },
+            { letter: 'B', type: 'upper', color: '#32CD32', index: 2 }, { letter: 'b', type: 'lower', color: '#32CD32', index: 2 },
+            { letter: 'C', type: 'upper', color: '#1E90FF', index: 3 }, { letter: 'c', type: 'lower', color: '#1E90FF', index: 3 },
+            { letter: 'D', type: 'upper', color: '#FFD700', index: 4 }, { letter: 'd', type: 'lower', color: '#FFD700', index: 4 },
+            { letter: 'E', type: 'upper', color: '#FF1493', index: 5 }, { letter: 'e', type: 'lower', color: '#FF1493', index: 5 },
+            { letter: 'F', type: 'upper', color: '#9370DB', index: 6 }, { letter: 'f', type: 'lower', color: '#9370DB', index: 6 },
+            { letter: 'G', type: 'upper', color: '#FF8C00', index: 7 }, { letter: 'g', type: 'lower', color: '#FF8C00', index: 7 },
+            { letter: 'H', type: 'upper', color: '#ADFF2F', index: 8 }, { letter: 'h', type: 'lower', color: '#ADFF2F', index: 8 },
+            { letter: 'I', type: 'upper', color: '#00FA9A', index: 9 }, { letter: 'i', type: 'lower', color: '#00FA9A', index: 9 },
+            { letter: 'J', type: 'upper', color: '#20B2AA', index: 10 }, { letter: 'j', type: 'lower', color: '#20B2AA', index: 10 },
+            { letter: 'K', type: 'upper', color: '#87CEFA', index: 11 }, { letter: 'k', type: 'lower', color: '#87CEFA', index: 11 },
+            { letter: 'L', type: 'upper', color: '#FF6347', index: 12 }, { letter: 'l', type: 'lower', color: '#FF6347', index: 12 },
+            { letter: 'M', type: 'upper', color: '#4682B4', index: 13 }, { letter: 'm', type: 'lower', color: '#4682B4', index: 13 },
+            { letter: 'N', type: 'upper', color: '#FFDAB9', index: 14 }, { letter: 'n', type: 'lower', color: '#FFDAB9', index: 14 },
+            { letter: 'O', type: 'upper', color: '#FA8072', index: 15 }, { letter: 'o', type: 'lower', color: '#FA8072', index: 15 },
+            { letter: 'P', type: 'upper', color: '#8A2BE2', index: 16 }, { letter: 'p', type: 'lower', color: '#8A2BE2', index: 16 },
+            { letter: 'Q', type: 'upper', color: '#5F9EA0', index: 17 }, { letter: 'q', type: 'lower', color: '#5F9EA0', index: 17 },
+            { letter: 'R', type: 'upper', color: '#7B68EE', index: 18 }, { letter: 'r', type: 'lower', color: '#7B68EE', index: 18 },
+            { letter: 'S', type: 'upper', color: '#6B8E23', index: 19 }, { letter: 's', type: 'lower', color: '#6B8E23', index: 19 },
+            { letter: 'T', type: 'upper', color: '#BA55D3', index: 20 }, { letter: 't', type: 'lower', color: '#BA55D3', index: 20 },
+            { letter: 'U', type: 'upper', color: '#8B4513', index: 21 }, { letter: 'u', type: 'lower', color: '#8B4513', index: 21 },
+            { letter: 'V', type: 'upper', color: '#D2691E', index: 22 }, { letter: 'v', type: 'lower', color: '#D2691E', index: 22 },
+            { letter: 'W', type: 'upper', color: '#CD5C5C', index: 23 }, { letter: 'w', type: 'lower', color: '#CD5C5C', index: 23 },
+            { letter: 'X', type: 'upper', color: '#F4A460', index: 24 }, { letter: 'x', type: 'lower', color: '#F4A460', index: 24 },
+            { letter: 'Y', type: 'upper', color: '#BC8F8F', index: 25 }, { letter: 'y', type: 'lower', color: '#BC8F8F', index: 25 },
+            { letter: 'Z', type: 'upper', color: '#A52A2A', index: 26 }, { letter: 'z', type: 'lower', color: '#A52A2A', index: 26 },
+            { letter: 'Ä', type: 'upper', color: '#FFB6C1', index: 27 }, { letter: 'ä', type: 'lower', color: '#FFB6C1', index: 27 },
+            { letter: 'Ö', type: 'upper', color: '#98FB98', index: 28 }, { letter: 'ö', type: 'lower', color: '#98FB98', index: 28 },
+            { letter: 'Ü', type: 'upper', color: '#DDA0DD', index: 29 }, { letter: 'ü', type: 'lower', color: '#DDA0DD', index: 29 },
+        ];
+
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let timerInterval;
+        let totalTime = 0; // Total time in seconds
+
+        $(document).ready(function () {
+            $('#emoji-overlay').hide();
+            initializeGame();
+
+            $('#restart-btn').on('click', function () {
+                $('#game-board').empty();
+                flippedCards = [];
+                matchedPairs = 0;
+                totalTime = 0;
+                clearInterval(timerInterval);
+                updateTimer();
+                timerInterval = setInterval(updateTimer, 1000);
+                $('#emoji-overlay').hide(); // Make sure the emoji is hidden on restart
+                initializeGame();
+            });
+
+            // Start timer on game load
+            timerInterval = setInterval(updateTimer, 1000);
+        });
+
+        function initializeGame() {
+            
+            // Step 1: Generate 8 unique random numbers between 1 and 29
+    const randomNumbers = [];
+    while (randomNumbers.length < 8) {
+        const randomNumber = Math.floor(Math.random() * 29) + 1; // Numbers between 1 and 29
+        if (!randomNumbers.includes(randomNumber)) {
+            randomNumbers.push(randomNumber);
+        }
+    }
+
+    console.log('Selected random numbers:', randomNumbers);
+
+    // Step 2: Select letters based on random numbers
+    const selectedLetters = randomNumbers.map(number => {
+        const upper = letters.find(l => l.type === 'upper' && l.index === number); // Find uppercase by index
+        const lower = letters.find(l => l.type === 'lower' && l.index === number); // Find lowercase by index
+        return { upper, lower };
+    });
+
+    console.log('Selected letter pairs:', selectedLetters);
+
+    // Step 3: Create pairs of uppercase and lowercase
+    const pairs = selectedLetters.reduce((acc, pair) => {
+        if (pair.upper && pair.lower) {
+            return [...acc, pair.upper, pair.lower]; // Push both uppercase and lowercase into the array
+        } else {
+            console.error('Error finding pair for index:', pair);
+        }
+        return acc;
+    }, []);
+
+    // Step 4: Shuffle the pairs array to randomize positions
+    const shuffledPairs = shuffle(pairs);
+
+    // Step 5: Append each card to the game board
+    $('#game-board').empty(); // Clear the game board before appending new cards
+    shuffledPairs.forEach((item, index) => {
+        const card = $(`<div class="card" data-id="${index}" data-letter="${item.letter}" data-type="${item.type}" data-color="${item.color}"></div>`);
+        $('#game-board').append(card);
+        console.log('Appending card:', item.letter, 'at index', index);
+    });
+
+
+
+
+            $('.card').on('click', function () {
+                if ($(this).hasClass('flipped') || $(this).hasClass('matched')) return;
+
+                $(this).addClass('flipped').css('background-color', $(this).data('color')).text($(this).data('letter'));
+                flippedCards.push($(this));
+
+                if (flippedCards.length === 2) {
+                    checkMatch();
+                }
+            });
+        }
+
+        function checkMatch() {
+            const card1 = flippedCards[0];
+            const card2 = flippedCards[1];
+
+            if (card1.data('letter').toLowerCase() === card2.data('letter').toLowerCase() && card1.data('type') !== card2.data('type')) {
+                card1.addClass('matched');
+                card2.addClass('matched');
+                matchedPairs++;
+                if (matchedPairs === 8) { // Adjusted to the total number of pairs
+                    clearInterval(timerInterval); // Stop the timer
+                    setTimeout(() => {
+                        showCompletionEffect();
+                    }, 500);
+                }
+            } else {
+                setTimeout(() => {
+                    card1.removeClass('flipped').css('background-color', '#E2E8F0').text('');
+                    card2.removeClass('flipped').css('background-color', '#E2E8F0').text('');
+                }, 1000);
+            }
+            flippedCards = [];
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Timer function
+        function updateTimer() {
+            totalTime++;
+            const minutes = Math.floor(totalTime / 60);
+            const seconds = totalTime % 60;
+            $('#timer').text(`Time: ${pad(minutes)}:${pad(seconds)}`);
+        }
+
+        function pad(number) {
+            return number < 10 ? `0${number}` : number;
+        }
+
+        // Show rainbow emoji upon completion
+        function showCompletionEffect() {
+            $('#emoji-overlay').show();
+            setTimeout(() => {
+                $('#emoji-overlay').fadeOut(1000);
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

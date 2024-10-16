@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            background: #F5F5DC;
+            font-family: Helvetica;
+            transition: background-color 1s ease;
+        }
+        table {
+            border-collapse: collapse; /* Ensures borders do not double */
+        }
+
+        td {
+            padding: 0; /* Remove default padding */
+            border: none; /* Remove border from td to avoid overriding */
+            padding-top: 20px;
+        }
+
+        .round-cell {
+            width: 25px; /* Width of the cell */
+            height: 25px; /* Height of the cell */
+            border: 2px solid #79B6A5; /* Black border around the cell */
+            border-radius: 50%; /* Rounds the element */
+            display: flex; /* Flexbox to center content */
+            align-items: center; /* Center content vertically */
+            justify-content: center; /* Center content horizontally */
+        }
+
+        .round-cell-full {
+            width: 25px; /* Width of the cell */
+            height: 25px; /* Height of the cell */
+            border: 2px solid #79B6A5; /* Black border around the cell */
+            background: #79B6A5;
+            border-radius: 50%; /* Rounds the element */
+            display: flex; /* Flexbox to center content */
+            align-items: center; /* Center content vertically */
+            justify-content: center; /* Center content horizontally */
+        }
+
+        button {
+            width: 130px;
+            height: 130px;
+            background-color: #79B6A5; /* Match the color scheme */
+            border: 2px solid #556B2F; /* Darker green border */
+            border-radius: 10px; /* Rounded corners */
+            font-size: 58px; /* Font size inside the button */
+            color: #fff; /* White text */
+            cursor: pointer;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease; /* Smooth transitions */
+        }
+
+        /* Hover effect */
+        button:hover {
+            background-color: #556B2F; /* Darker green on hover */
+            box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.2); /* Add shadow on hover */
+        }
+
+        /* Pressed effect */
+        button:active {
+            background-color: #3E4E28; /* Even darker green when pressed */
+            transform: translateY(4px); /* Simulate button press */
+        }
+
+        .confetti {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            background-color: red;
+            animation: fall 3s linear infinite;
+            opacity: 0.7;
+        }
+
+
+        #result {
+            text-align: center;
+            font-size: 75px;
+        }
+
+        #points {
+            font-size: 100px;
+            color: #555;
+            position: fixed;
+            top: 0;
+            right: 20px;
+        }
+
+        #timer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            animation-duration: 1s;
+            animation: fall 3s linear infinite;
+            transition: height 1s ease;
+            background: #79B6A5;
+        }
+    </style>
+
+    <!-- jQuery CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- jQuery UI CDN -->
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <!-- jQuery UI CSS for effects -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+</head>
+<body>
+
+<center>
+    <div id="timer"></div>
+    <table style="width: 400px; margin-top: 150px;" id="tackice">
+        <tr>
+            <td id="td1"><div class="round-cell"></div></td>
+            <td id="td2"><div class="round-cell"></div></td>
+            <td id="td3"><div class="round-cell"></div></td>
+            <td id="td4"><div class="round-cell"></div></td>
+            <td id="td5"><div class="round-cell"></div></td>
+            <td id="space1" style="width: 25px;"></td>
+            <td id="td11"><div class="round-cell"></div></td>
+            <td id="td12"><div class="round-cell"></div></td>
+            <td id="td13"><div class="round-cell"></div></td>
+            <td id="td14"><div class="round-cell"></div></td>
+            <td id="td15"><div class="round-cell"></div></td>
+        </tr>
+        <tr style="paddding-top: 20px">
+            <td id="td6"><div class="round-cell"></div></td>
+            <td id="td7"><div class="round-cell"></div></td>
+            <td id="td8"><div class="round-cell"></div></td>
+            <td id="td9"><div class="round-cell"></div></td>
+            <td id="td10"><div class="round-cell"></div></td>
+            <td id="space1" style="width: 25px;"></td>
+            <td id="td16"><div class="round-cell"></div></td>
+            <td id="td17"><div class="round-cell"></div></td>
+            <td id="td18"><div class="round-cell"></div></td>
+            <td id="td19"><div class="round-cell"></div></td>
+            <td id="td20"><div class="round-cell"></div></td>
+        </tr>
+    </table>
+
+    <table style="width: 400px; margin-top: 100px;">
+        <tr>
+            <td>
+                <button id="b1" onclick="determineClick(this)">
+                    
+                </button>
+            </td>
+            <td id="result"> </td>
+            <td>
+                <button id="b2" onclick="determineClick(this)">
+                    
+                </button>
+            </td>
+        </tr>
+        <tr>
+            <td>
+            </td>
+            <td>
+                <button id="b3" onclick="determineClick(this)">
+                    
+                </button>
+            </td>
+            <td>
+            </td>
+        </tr>
+    </table>
+    <div id="points">0</div>
+
+</center>
+
+
+<script>
+const startingTime = 12000;
+var contdownValue = startingTime;
+
+var timer = 20;
+var randomNumber = 0;
+var points = 0;
+
+const germanNumbers = [
+    'Null', 'Eins', 'Zwei', 'Drei', 'Vier', 'Fünf', 'Sechs', 'Sieben', 'Acht', 'Neun',
+    'Zehn', 'Elf', 'Zwölf', 'Dreizehn', 'Vierzehn', 'Fünfzehn', 'Sechzehn', 'Siebzehn',
+    'Achtzehn', 'Neunzehn', 'Zwanzig'
+];
+
+function countDown() {
+    contdownValue = contdownValue - 1000;
+
+    jQuery("#timer").height(Math.round((100 / startingTime) * contdownValue) + "vh");
+
+    if (contdownValue < -2000) {
+        stopTheGame();
+    } else {
+        setTimeout(function() {
+            countDown();
+        }, Math.round(1000 / (points/50+1)));
+    }
+}
+
+function stopTheGame() {
+    document.getElementById("result").innerHTML = "<div id='theend'>☠️</div>";
+    $("#theend").effect("pulsate", { times: 3 }, 500);
+    jQuery("body").css("background-color", "#000");
+}
+
+function startTheGame() {
+    contdownValue = startingTime;
+    points = 0;
+    jQuery("body").css("background-color", "#F5F5DC");
+    nextRound();
+    countDown();
+}
+
+function nextRound() {
+    randomNumber = Math.floor(Math.random() * 21);
+
+    for (let i = 1; i <= 20; i++) {
+        let td = document.getElementById('td' + i);
+        if (td) {
+            td.innerHTML = '<div class="round-cell"></div>';
+        }
+    }
+
+    for (let i = 1; i <= randomNumber; i++) {
+        let td = document.getElementById('td' + i);
+        if (td) {
+            td.innerHTML = '<div class="round-cell-full"></div>';
+        }
+    }
+
+    document.getElementById("result").innerHTML = "";
+
+    let coin = Math.floor(Math.random() * 3);
+
+    let a = shuffleArray([randomNumber, randomNumber+1, randomNumber+2]);
+
+    if (coin == 1) { 
+        a = shuffleArray([randomNumber, randomNumber-1, randomNumber-2]);
+    }
+    if (coin == 2) { 
+        a = shuffleArray([randomNumber, randomNumber+1, randomNumber-1]);
+    }
+
+    for (let i = 1; i <= 3; i++) {
+        document.getElementById(`b${i}`).innerHTML = a[i-1];
+    }
+}
+
+// Add event listener to the document that runs when the DOM content is fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    nextRound();
+    countDown();
+
+    // Add event listener to listen for keydown events
+    document.addEventListener('keydown', function(event) {
+        // Check if the pressed key is the Space key (key code 32 or key ' ' for modern browsers)
+        if ((event.code === 'Space' || event.key === ' ') && contdownValue <= 0) {
+            startTheGame();
+            event.preventDefault();
+        }
+    });
+});
+
+function determineClick(el) {
+    if (contdownValue < -1000) {
+        $("#theend").effect("pulsate", { times: 3 }, 500);
+        return;
+    }
+
+    if (parseInt(el.innerHTML) == randomNumber) {
+        contdownValue = startingTime;
+        document.getElementById("result").innerHTML = "<div id='heart'>❤️</div>";
+        $("#heart").effect("pulsate", { times: 3 }, 500);
+        points = points + 1;
+        jQuery("#timer").height("110vh");
+
+        setTimeout(function () { nextRound() }, 500);
+    } else {
+        // points = 0;
+        $("#tackice").effect("shake", {
+            times: 3,  // Number of shakes
+            distance: 10,  // Distance to move
+            direction: "left"  // Direction of shake (left, right, up, down)
+        }, 500); 
+    }
+
+    document.getElementById("points").innerHTML = points;
+}
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        // Generate a random index from 0 to i
+        const j = Math.floor(Math.random() * (i + 1));
+
+        // Swap elements array[i] and array[j]
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+function speakGermanNumber(text) {
+    // Check if the browser supports speech synthesis
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'de-DE'; // Set language to German
+        window.speechSynthesis.speak(utterance);
+    } else {
+        console.log('Sorry, your browser does not support speech synthesis.');
+    }
+}
+</script>
